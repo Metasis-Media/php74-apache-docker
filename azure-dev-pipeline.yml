@@ -1,0 +1,64 @@
+# Development Pipeline
+# Test and package your PHP project.
+# Add steps that run tests, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/php
+
+# trigger:
+#   - master
+
+pool:
+    vmImage: 'ubuntu-latest'
+  
+  variables:
+    phpVersion: 7.2
+  
+  steps:
+  - script: |
+      sudo update-alternatives --set php /usr/bin/php$(phpVersion)
+      sudo update-alternatives --set phar /usr/bin/phar$(phpVersion)
+      sudo update-alternatives --set phpdbg /usr/bin/phpdbg$(phpVersion)
+      sudo update-alternatives --set php-cgi /usr/bin/php-cgi$(phpVersion)
+      sudo update-alternatives --set phar.phar /usr/bin/phar.phar$(phpVersion)
+      php -version
+    displayName: 'Setting up PHP version $(phpVersion)' 
+  
+  - script: |
+      cd src/barings.com && touch database/database.sqlite
+      cp .env.testing .env
+    displayName: 'Setting Up Environment' 
+  
+  - script: |
+      curl -sL https://deb.nodesource.com/setup_11.x | sudo -E bash -
+      sudo apt-get install -y build-essential debconf-utils screen nodejs google-chrome-stable
+    displayName: 'Installing System Dependencies'
+  
+  - script: |
+      cd src/barings.com && composer install --no-interaction
+    displayName: 'Install Composer Dependencies'
+  
+  - script: |
+      cd src/barings.com && php artisan key:generate
+    displayName: 'Setting Up App Key' 
+  
+  - script: |
+      cd src/barings.com
+      php artisan dusk:chrome-driver
+      sudo screen -d -m google-chrome-stable --headless --disable-gpu --disable-dev-shm-usage --disable-software-rasterizer --remote-debugging-port=9222 http://http://127.0.0.1:8000
+      sudo screen -d -m php artisan serve
+    displayName: 'Starting Chrome and the Web Server'
+  
+  - script: |
+      cd src/barings.com
+      vendor/bin/phpunit --testdox --verbose
+    displayName: 'Running Unit Test'
+  
+  - script: |
+      cd src/barings.com
+      php artisan dusk:install
+      php artisan dusk --debug --verbose
+    displayName: 'Running Browser Tests'
+  
+  - script: |
+      cd src/barings.com
+      ./vendor/bin/phpinsights -v --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90 --disable-security-check --no-interaction
+    displayName: 'Running PHP Insights'
