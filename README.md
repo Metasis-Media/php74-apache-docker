@@ -1,9 +1,7 @@
-# Laravel + Docker POC
-
-**Warning:** Long-term exposure to Docker may cause loss of sanity, insomnia and gray hair. This code is known to the state of California to cause cancer, birth defects, and reproductive harm. 
+# Apache+PHP74
  
 ### Assumptions
-- MySQL as a Service in Azure
+- MySQL as a Service or Vagrant MySQL
 - Volume with wwwroot will be mounted at start
 
 ### Building Locally
